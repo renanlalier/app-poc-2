@@ -1,0 +1,29 @@
+name: agent-dev
+
+# Caller do repo de produto. Identico ao do app-poc-1, exceto pelo `role`.
+# E essa a prova de que a platform e biblioteca: 4 repos, 1 arquivo, 1 diferenca.
+
+on:
+  repository_dispatch:
+    types: [agent-dev]
+  workflow_dispatch:
+    inputs:
+      execution_id:
+        description: "Id da execucao"
+        required: true
+        default: "manual-test"
+      sub_issue:
+        description: "Numero da sub-issue"
+        required: true
+        default: "1"
+
+jobs:
+  dev:
+    uses: renanlalier/poc-agentic-platform/.github/workflows/agent-dev.yml@v1
+    with:
+      role: backend-swe
+      execution_id: ${{ github.event.client_payload.execution_id || inputs.execution_id }}
+      sub_issue: ${{ fromJSON(github.event.client_payload.sub_issue || inputs.sub_issue) }}
+      contract_ref: ${{ github.event.client_payload.contract_ref || 'v1' }}
+      cli_override: ${{ github.event.client_payload.cli_override || '' }}
+      model_override: ${{ github.event.client_payload.model_override || '' }}
