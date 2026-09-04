@@ -4,28 +4,29 @@ repo_role: product
 defaults:
   cli: dry-run          # troque para codex quando tiver OPENAI_API_KEY
   models:
-    backend-swe: dry-run
+    backend-engineer: dry-run
     qa: dry-run
 
-roles_enabled: [backend-swe, qa]
+roles_enabled: [backend-engineer, qa]
 
 stack:
-  runtime: node@22
-  language: typescript
-  framework: fastify
+  runtime: jvm
+  language: kotlin
+  framework: ktor
+  build_tool: gradle
+  test: [ktor-test-host]
 
 constraints:
   forbid_paths:
     - .github/workflows/**
     - .agentic/**
-    - src/schema/**         # contrato so muda via expand/contract
+    - src/main/kotlin/schema/**   # contrato so muda via expand/contract
   require_contract_bump: true
   forbid_dependencies_add: true
 
 gates:
   - build
-  - test:unit
-  - test:contract
+  - test
 
 pr:
   base_branch: main
