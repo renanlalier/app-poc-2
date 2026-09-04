@@ -1,8 +1,5 @@
 name: agent-dev
 
-# Caller do repo de produto. Identico ao do app-poc-1, exceto pelo `role`.
-# E essa a prova de que a platform e biblioteca: 4 repos, 1 arquivo, 1 diferenca.
-
 on:
   repository_dispatch:
     types: [agent-dev]
@@ -30,7 +27,7 @@ jobs:
       pull-requests: write
       issues: write
     with:
-      role: backend-swe
+      role: backend-engineer
       execution_id: ${{ github.event.client_payload.execution_id || inputs.execution_id }}
       sub_issue: ${{ fromJSON(github.event.client_payload.sub_issue || inputs.sub_issue) }}
       contract_ref: ${{ github.event.client_payload.contract_ref || 'v1' }}
