@@ -17,9 +17,18 @@ on:
         required: true
         default: "1"
 
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
 jobs:
   dev:
     uses: renanlalier/poc-agentic-platform/.github/workflows/agent-dev.yml@v1
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
     with:
       role: backend-swe
       execution_id: ${{ github.event.client_payload.execution_id || inputs.execution_id }}
