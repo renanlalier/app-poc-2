@@ -1,0 +1,61 @@
+name: on-subissue
+
+# Three jobs, one file:
+#
+# plan-first-turn  — triggered by agent-fanout via repository_dispatch(agent-plan)
+#                    when a new sub-issue is created for this repo
+# plan-next-turn   — triggered by any human comment on an issue that still
+#                    carries the status-planning label; filtered by the
+#                    <!-- pipe:plan --> marker so the pipeline never replies
+#                    to its own comments and loops
+# implement        — triggered when the plan-approved label is applied to the
+#                    sub-issue, which agent-plan does when the human approves
+#                    the technical plan; starts implementation and opens a draft PR
+
+on:
+  repository_dispatch:
+    types: [agent-plan]
+  issue_comment:
+    types: [created]
+  issues:
+    types: [labeled]
+
+jobs:
+  plan-first-turn:
+    if: github.event_name == 'repository_dispatch' && github.event.action == 'agent-plan'
+    uses: renanlalier/poc-agentic-platform/.github/workflows/agent-plan.yml@v1
+    secrets: inherit
+    with:
+      role: backend-engineer
+      sub_issue: ${{ github.event.client_payload.sub_issue }}
+      execution_id: ${{ github.event.client_payload.execution_id }}
+      contract_ref: ${{ github.event.client_payload.contract_ref || 'v1' }}
+      cli_override: ${{ github.event.client_payload.cli_override || '' }}
+      model_override: ${{ github.event.client_payload.model_override || '' }}
+
+  plan-next-turn:
+    if: >
+      github.event_name == 'issue_comment' &&
+      github.event.action == 'created' &&
+      contains(github.event.issue.labels.*.name, 'status-planning') &&
+      !contains(github.event.comment.body, '<!-- pipe:plan -->')
+    uses: renanlalier/poc-agentic-platform/.github/workflows/agent-plan.yml@v1
+    secrets: inherit
+    with:
+      role: backend-engineer
+      sub_issue: ${{ github.event.issue.number }}
+
+  implement:
+    if: >
+      github.event_name == 'issues' &&
+      github.event.action == 'labeled' &&
+      github.event.label.name == 'plan-approved'
+    uses: renanlalier/poc-agentic-platform/.github/workflows/agent-dev.yml@v1
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    secrets: inherit
+    with:
+      role: backend-engineer
+      sub_issue: ${{ github.event.issue.number }}

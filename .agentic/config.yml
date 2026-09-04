@@ -2,7 +2,7 @@ version: 1
 repo_role: product
 
 defaults:
-  cli: dry-run          # troque para codex quando tiver OPENAI_API_KEY
+  cli: dry-run          # switch to codex when you have OPENAI_API_KEY
   models:
     backend-engineer: dry-run
     qa: dry-run
@@ -20,7 +20,7 @@ constraints:
   forbid_paths:
     - .github/workflows/**
     - .agentic/**
-    - src/main/kotlin/schema/**   # contrato so muda via expand/contract
+    - src/main/kotlin/schema/**   # contract changes only via expand/contract
   require_contract_bump: true
   forbid_dependencies_add: true
 

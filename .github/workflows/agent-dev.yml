@@ -6,11 +6,11 @@ on:
   workflow_dispatch:
     inputs:
       execution_id:
-        description: "Id da execucao"
+        description: "Execution ID"
         required: true
         default: "manual-test"
       sub_issue:
-        description: "Numero da sub-issue"
+        description: "Sub-issue number"
         required: true
         default: "1"
 

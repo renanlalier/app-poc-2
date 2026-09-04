@@ -1,22 +1,21 @@
 # app-poc-2
 
-POC: repositório de produto (backend) — laboratório da pipe agêntica.
+POC: product repository 2 (backend — Kotlin + Ktor).
 
-Hello world Kotlin + Ktor. `GET /` responde `{"message": "Hello World"}`,
-`GET /health` responde `{"status": "ok"}`.
+Hello world Kotlin + Ktor. `GET /` returns `{"message": "Hello World"}`,
+`GET /health` returns `{"status": "ok"}`.
 
-## Rodar localmente
+## Run locally
 
-Este repositório não inclui o Gradle Wrapper (binário, não versionável
-por este processo de criação de arquivos). Com Gradle instalado
-localmente:
+This repository does not include the Gradle Wrapper (binary, not versionable
+by this file-creation process). With Gradle installed locally:
 
 ```bash
-gradle run    # sobe o servidor em :8080
-gradle test   # roda ApplicationTest
+gradle run    # starts the server on :8080
+gradle test   # runs ApplicationTest
 ```
 
-Para gerar o wrapper e não depender de Gradle global:
+To generate the wrapper and avoid depending on a global Gradle:
 
 ```bash
 gradle wrapper --gradle-version 8.10
@@ -25,6 +24,6 @@ git add gradlew gradlew.bat gradle/
 
 ## Stack
 
-Kotlin 1.9, Ktor 2.3 (Netty), kotlinx.serialization, testado com
-`testApplication` do próprio Ktor. Ver `.agentic/config.yml` para o
-que a pipe agêntica sabe sobre este repositório.
+Kotlin 1.9, Ktor 2.3 (Netty), kotlinx.serialization, tested with
+Ktor's own `testApplication`. See `.agentic/config.yml` for what the
+agentic pipeline knows about this repository.
