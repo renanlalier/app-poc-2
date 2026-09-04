@@ -21,7 +21,7 @@ permissions:
 
 jobs:
   dev:
-    uses: renanlalier/poc-agentic-platform/.github/workflows/agent-dev.yml@v1
+    uses: renanlalier/agentic-pipeline/.github/workflows/agent-dev.yml@v1
     permissions:
       contents: write
       pull-requests: write

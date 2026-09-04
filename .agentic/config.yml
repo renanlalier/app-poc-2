@@ -19,10 +19,17 @@ stack:
 constraints:
   forbid_paths:
     - .github/workflows/**
-    - .agentic/**
+    - .agentic/config.yml         # agent cannot modify its own configuration
+    - .agentic/skills/**          # nor repo-specific skills
     - src/main/kotlin/schema/**   # contract changes only via expand/contract
+    # .agentic/memory/** is intentionally writable by agents
   require_contract_bump: true
   forbid_dependencies_add: true
+
+memory:
+  enabled: true
+  consolidate_after_execution: true
+  max_episodes: 20
 
 gates:
   - build

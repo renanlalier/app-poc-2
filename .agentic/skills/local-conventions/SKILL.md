@@ -15,7 +15,6 @@ organized as `Route` extension functions in `Application.kt`
 same extension-function pattern instead of inflating the `routing { }` block.
 
 ## Exposed contract
-`GET /` and `GET /health` are consumed by `app-poc-1` (see
-`config/capability-map.yml` in the platform, `implies` rule). Changing the
+`GET /` and `GET /health` are consumed by `app-poc-1`. Changing the
 response format here is a contract change — discuss the versioning strategy
 in the plan before implementing.

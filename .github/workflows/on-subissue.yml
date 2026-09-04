@@ -2,7 +2,7 @@ name: on-subissue
 
 # Three jobs, one file:
 #
-# plan-first-turn  — triggered by agent-fanout via repository_dispatch(agent-plan)
+# plan-first-turn  — triggered by agent-dispatch via repository_dispatch(agent-plan)
 #                    when a new sub-issue is created for this repo
 # plan-next-turn   — triggered by any human comment on an issue that still
 #                    carries the status-planning label; filtered by the
@@ -23,7 +23,7 @@ on:
 jobs:
   plan-first-turn:
     if: github.event_name == 'repository_dispatch' && github.event.action == 'agent-plan'
-    uses: renanlalier/poc-agentic-platform/.github/workflows/agent-plan.yml@v1
+    uses: renanlalier/agentic-pipeline/.github/workflows/agent-plan.yml@v1
     secrets: inherit
     with:
       role: backend-engineer
@@ -39,7 +39,7 @@ jobs:
       github.event.action == 'created' &&
       contains(github.event.issue.labels.*.name, 'status-planning') &&
       !contains(github.event.comment.body, '<!-- pipe:plan -->')
-    uses: renanlalier/poc-agentic-platform/.github/workflows/agent-plan.yml@v1
+    uses: renanlalier/agentic-pipeline/.github/workflows/agent-plan.yml@v1
     secrets: inherit
     with:
       role: backend-engineer
@@ -50,7 +50,7 @@ jobs:
       github.event_name == 'issues' &&
       github.event.action == 'labeled' &&
       github.event.label.name == 'plan-approved'
-    uses: renanlalier/poc-agentic-platform/.github/workflows/agent-dev.yml@v1
+    uses: renanlalier/agentic-pipeline/.github/workflows/agent-dev.yml@v1
     permissions:
       contents: write
       pull-requests: write
