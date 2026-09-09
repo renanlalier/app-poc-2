@@ -2,10 +2,11 @@ version: 1
 repo_role: product
 
 defaults:
-  cli: dry-run          # switch to codex when you have OPENAI_API_KEY
+  cli: codex
+  execution_target: cloud
   models:
-    backend-engineer: dry-run
-    qa: dry-run
+    backend-engineer: codex-1
+    qa: codex-1
 
 roles_enabled: [backend-engineer, qa]
 
