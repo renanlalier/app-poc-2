@@ -1,0 +1,8 @@
+# MCP available to the Codex root agent in this repository.
+# Agent TOMLs (.codex/agents/*.toml) are generated at environment setup time
+# by the setup script that clones renanlalier/agentic-pipeline and runs
+# brain/agents/to-codex-toml.sh.
+
+[mcp_servers.context7]
+url = "https://mcp.context7.com/mcp"
+bearer_token_env_var = "CONTEXT7_API_KEY"

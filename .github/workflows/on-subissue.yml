@@ -19,6 +19,8 @@ on:
     types: [created]
   issues:
     types: [labeled]
+  pull_request:
+    types: [opened]
 
 jobs:
   plan-first-turn:
@@ -32,18 +34,21 @@ jobs:
       contract_ref: ${{ github.event.client_payload.contract_ref || 'v1' }}
       cli_override: ${{ github.event.client_payload.cli_override || '' }}
       model_override: ${{ github.event.client_payload.model_override || '' }}
+      execution_target: ${{ vars.CODEX_EXECUTION_TARGET || '' }}
 
   plan-next-turn:
     if: >
       github.event_name == 'issue_comment' &&
       github.event.action == 'created' &&
+      github.event.sender.login != 'codex[bot]' &&
       contains(github.event.issue.labels.*.name, 'status-planning') &&
-      !contains(github.event.comment.body, '<!-- pipe:plan -->')
+      !contains(github.event.comment.body, '<!-- pipe:')
     uses: renanlalier/agentic-pipeline/.github/workflows/agent-plan.yml@v1
     secrets: inherit
     with:
       role: backend-engineer
       sub_issue: ${{ github.event.issue.number }}
+      execution_target: ${{ vars.CODEX_EXECUTION_TARGET || '' }}
 
   implement:
     if: >
@@ -59,3 +64,80 @@ jobs:
     with:
       role: backend-engineer
       sub_issue: ${{ github.event.issue.number }}
+      execution_target: ${{ vars.CODEX_EXECUTION_TARGET || '' }}
+
+  codex-response-received:
+    if: >
+      github.event_name == 'issue_comment' &&
+      github.event.action == 'created' &&
+      github.event.sender.login == 'codex[bot]' &&
+      contains(github.event.issue.labels.*.name, 'status-awaiting-codex-response') &&
+      !contains(github.event.comment.body, '<!-- pipe:')
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Transition planning state based on Codex response
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          ISSUE: ${{ github.event.issue.number }}
+          COMMENT_URL: ${{ github.event.comment.html_url }}
+          COMMENT_BODY: ${{ github.event.comment.body }}
+        run: |
+          set -euo pipefail
+          CODEX_STATUS=$(printf '%s' "$COMMENT_BODY" \
+            | grep -o 'codex:status:[a-z]*' | head -1 | cut -d: -f3 || echo "unknown")
+          echo "Codex status marker: $CODEX_STATUS"
+
+          gh api -X DELETE "repos/$REPO/issues/$ISSUE/labels/status-awaiting-codex-response" \
+            >/dev/null 2>&1 || true
+
+          if [ "$CODEX_STATUS" = "approved" ]; then
+            gh api -X DELETE "repos/$REPO/issues/$ISSUE/labels/status-planning" \
+              >/dev/null 2>&1 || true
+            gh api "repos/$REPO/issues/$ISSUE/labels" \
+              -f "labels[]=plan-approved" >/dev/null
+            echo "Plan approved via Codex Cloud → plan-approved label applied"
+          elif [ "$CODEX_STATUS" = "escalated" ]; then
+            gh api -X DELETE "repos/$REPO/issues/$ISSUE/labels/status-planning" \
+              >/dev/null 2>&1 || true
+            echo "Planning escalated by Codex Cloud."
+          else
+            echo "Codex asked a question (status: $CODEX_STATUS). Keeping status-planning."
+          fi
+
+          jq -n --arg body "🤖 Codex Cloud responded ([view response]($COMMENT_URL)).
+<!-- pipe:audit -->" \
+            '{body: $body}' > audit_payload.json
+          gh api "repos/$REPO/issues/$ISSUE/comments" --input audit_payload.json
+
+  codex-impl-done:
+    if: >
+      github.event_name == 'pull_request' &&
+      github.event.action == 'opened' &&
+      github.event.sender.login == 'codex[bot]' &&
+      startsWith(github.event.pull_request.head.ref, 'agentic/')
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Post audit comment on the linked sub-issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          set -euo pipefail
+          SUB_ISSUE=$(printf '%s' "$PR_BODY" \
+            | grep -o 'Closes #[0-9]*' | grep -o '[0-9]*' | head -1 || true)
+          [ -z "$SUB_ISSUE" ] && { echo "No 'Closes #<n>' in PR body; skipping."; exit 0; }
+
+          gh api -X DELETE "repos/$REPO/issues/$SUB_ISSUE/labels/status-awaiting-codex-response" \
+            >/dev/null 2>&1 || true
+
+          jq -n --arg body "🤖 Codex Cloud opened a PR: $PR_URL
+<!-- pipe:audit -->" \
+            '{body: $body}' > audit_payload.json
+          gh api "repos/$REPO/issues/$SUB_ISSUE/comments" --input audit_payload.json
