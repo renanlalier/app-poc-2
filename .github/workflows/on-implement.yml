@@ -1,0 +1,64 @@
+name: on-implement
+
+# Phase 2 — Implementation.
+#
+# implement       — triggered when the plan-approved label is applied; starts
+#                   implementation and opens a draft PR
+# codex-impl-done — triggered when codex[bot] opens a PR on an agentic/ branch;
+#                   removes awaiting-agent-response from the linked sub-issue
+#                   and posts an audit comment
+
+on:
+  issues:
+    types: [labeled]
+  pull_request:
+    types: [opened]
+
+jobs:
+  implement:
+    if: >
+      github.event_name == 'issues' &&
+      github.event.action == 'labeled' &&
+      github.event.label.name == 'plan-approved'
+    uses: renanlalier/agentic-pipeline/.github/workflows/agent-dev.yml@v1
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    secrets: inherit
+    with:
+      role: backend-engineer
+      sub_issue: ${{ github.event.issue.number }}
+      execution_target: ${{ vars.CODEX_EXECUTION_TARGET || '' }}
+
+  codex-impl-done:
+    # Fires when Codex Cloud opens a PR after completing implementation.
+    # Posts an audit comment on the linked sub-issue.
+    if: >
+      github.event_name == 'pull_request' &&
+      github.event.action == 'opened' &&
+      github.event.sender.login == 'codex[bot]' &&
+      startsWith(github.event.pull_request.head.ref, 'agentic/')
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Post audit comment on the linked sub-issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          set -euo pipefail
+          SUB_ISSUE=$(printf '%s' "$PR_BODY" \
+            | grep -o 'Closes #[0-9]*' | grep -o '[0-9]*' | head -1 || true)
+          [ -z "$SUB_ISSUE" ] && { echo "No 'Closes #<n>' in PR body; skipping."; exit 0; }
+
+          gh api -X DELETE "repos/$REPO/issues/$SUB_ISSUE/labels/awaiting-agent-response" \
+            >/dev/null 2>&1 || true
+
+          jq -n --arg body "🤖 Codex Cloud opened a PR: $PR_URL
+<!-- pipe:audit -->" \
+            '{body: $body}' > audit_payload.json
+          gh api "repos/$REPO/issues/$SUB_ISSUE/comments" --input audit_payload.json

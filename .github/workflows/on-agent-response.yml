@@ -1,0 +1,67 @@
+name: on-agent-response
+
+# Cross-cutting — Bot response handler (state machine).
+#
+# Fires when codex[bot] posts a planning response on a sub-issue while
+# awaiting-agent-response is present. Reads the codex:status marker and
+# transitions labels:
+#
+#   approved  → removes planning + awaiting-agent-response, applies plan-approved
+#   escalated → removes planning + awaiting-agent-response (human must intervene)
+#   ask/other → removes only awaiting-agent-response, keeps planning
+#               (Codex asked a question; next human comment re-triggers plan-next-turn)
+#
+# Always posts an audit comment linking to the Codex response.
+
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  codex-response-received:
+    # Fires when the Codex bot posts a planning response on a sub-issue.
+    # Transitions planning → plan-approved when Codex approves the plan.
+    if: >
+      github.event_name == 'issue_comment' &&
+      github.event.action == 'created' &&
+      github.event.sender.login == 'codex[bot]' &&
+      contains(github.event.issue.labels.*.name, 'awaiting-agent-response') &&
+      !contains(github.event.comment.body, '<!-- pipe:')
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Transition planning state based on Codex response
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          ISSUE: ${{ github.event.issue.number }}
+          COMMENT_URL: ${{ github.event.comment.html_url }}
+          COMMENT_BODY: ${{ github.event.comment.body }}
+        run: |
+          set -euo pipefail
+          CODEX_STATUS=$(printf '%s' "$COMMENT_BODY" \
+            | grep -o 'codex:status:[a-z]*' | head -1 | cut -d: -f3 || echo "unknown")
+          echo "Codex status marker: $CODEX_STATUS"
+
+          gh api -X DELETE "repos/$REPO/issues/$ISSUE/labels/awaiting-agent-response" \
+            >/dev/null 2>&1 || true
+
+          if [ "$CODEX_STATUS" = "approved" ]; then
+            gh api -X DELETE "repos/$REPO/issues/$ISSUE/labels/planning" \
+              >/dev/null 2>&1 || true
+            gh api "repos/$REPO/issues/$ISSUE/labels" \
+              -f "labels[]=plan-approved" >/dev/null
+            echo "Plan approved via Codex Cloud → plan-approved label applied"
+          elif [ "$CODEX_STATUS" = "escalated" ]; then
+            gh api -X DELETE "repos/$REPO/issues/$ISSUE/labels/planning" \
+              >/dev/null 2>&1 || true
+            echo "Planning escalated by Codex Cloud."
+          else
+            echo "Codex asked a question (status: $CODEX_STATUS). Keeping planning."
+          fi
+
+          jq -n --arg body "🤖 Codex Cloud responded ([view response]($COMMENT_URL)).
+<!-- pipe:audit -->" \
+            '{body: $body}' > audit_payload.json
+          gh api "repos/$REPO/issues/$ISSUE/comments" --input audit_payload.json

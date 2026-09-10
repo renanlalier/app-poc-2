@@ -1,0 +1,44 @@
+name: on-plan
+
+# Phase 1 — Planning.
+#
+# plan-first-turn — triggered by agent-dispatch via repository_dispatch(agent-plan)
+#                   when a new sub-issue is created for this repo
+# plan-next-turn  — triggered by any human comment on an issue that still carries
+#                   the planning label; filtered by <!-- pipe:plan --> so the
+#                   pipeline never replies to its own comments and loops
+
+on:
+  repository_dispatch:
+    types: [agent-plan]
+  issue_comment:
+    types: [created]
+
+jobs:
+  plan-first-turn:
+    if: github.event_name == 'repository_dispatch' && github.event.action == 'agent-plan'
+    uses: renanlalier/agentic-pipeline/.github/workflows/agent-plan.yml@v1
+    secrets: inherit
+    with:
+      role: backend-engineer
+      sub_issue: ${{ github.event.client_payload.sub_issue }}
+      execution_id: ${{ github.event.client_payload.execution_id }}
+      contract_ref: ${{ github.event.client_payload.contract_ref || 'v1' }}
+      cli_override: ${{ github.event.client_payload.cli_override || '' }}
+      model_override: ${{ github.event.client_payload.model_override || '' }}
+      execution_target: ${{ vars.CODEX_EXECUTION_TARGET || '' }}
+
+  plan-next-turn:
+    if: >
+      github.event_name == 'issue_comment' &&
+      github.event.action == 'created' &&
+      github.event.sender.login != 'codex[bot]' &&
+      contains(github.event.issue.labels.*.name, 'planning') &&
+      !contains(github.event.comment.body, '<!-- pipe:') &&
+      !contains(github.event.comment.body, '<!-- codex:dispatch:')
+    uses: renanlalier/agentic-pipeline/.github/workflows/agent-plan.yml@v1
+    secrets: inherit
+    with:
+      role: backend-engineer
+      sub_issue: ${{ github.event.issue.number }}
+      execution_target: ${{ vars.CODEX_EXECUTION_TARGET || '' }}
