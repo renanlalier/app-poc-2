@@ -2,11 +2,11 @@ version: 1
 repo_role: product
 
 defaults:
-  cli: codex
-  execution_target: cloud
+  cli: claude-code
+  execution_target: local
   models:
-    backend-engineer: codex-1
-    qa: codex-1
+    backend-engineer: claude-sonnet-4-6
+    qa: claude-sonnet-4-6
 
 roles_enabled: [backend-engineer, qa]
 
