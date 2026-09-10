@@ -40,3 +40,6 @@ pr:
   base_branch: main
   draft: true
   labels: [agentic]
+
+secrets:
+  source: vault
