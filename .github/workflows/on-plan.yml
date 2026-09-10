@@ -27,6 +27,7 @@ jobs:
       cli_override: ${{ github.event.client_payload.cli_override || '' }}
       model_override: ${{ github.event.client_payload.model_override || '' }}
       execution_target: ${{ vars.CODEX_EXECUTION_TARGET || '' }}
+      requester: ${{ github.event.client_payload.requester || '' }}
 
   plan-next-turn:
     if: >
