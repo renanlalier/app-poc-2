@@ -21,10 +21,6 @@ jobs:
       github.event.action == 'labeled' &&
       github.event.label.name == 'plan-approved'
     uses: renanlalier/agentic-pipeline/.github/workflows/agent-dev.yml@v1
-    permissions:
-      contents: write
-      pull-requests: write
-      issues: write
     secrets: inherit
     with:
       role: backend-engineer
