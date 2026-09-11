@@ -3,16 +3,17 @@ name: on-plan
 # Phase 1 — Planning.
 #
 # plan-first-turn — triggered by agent-dispatch via repository_dispatch(agent-plan)
-#                   when a new sub-issue is created for this repo
-# plan-next-turn  — triggered by any human comment on an issue that still carries
-#                   the planning label; filtered by <!-- pipe:plan --> so the
-#                   pipeline never replies to its own comments and loops
+#                   when a new sub-issue is created for this repo, and again by
+#                   agent-plan-review when the tech-lead requests revision.
+#
+# Human comments no longer trigger planning. Iteration is driven by the
+# tech-lead's review: if revision is needed, agent-plan-review re-dispatches
+# repository_dispatch(agent-plan) so the engineer revises with feedback visible
+# in the conversation. The human reviews only the final PR.
 
 on:
   repository_dispatch:
     types: [agent-plan]
-  issue_comment:
-    types: [created]
 
 jobs:
   plan-first-turn:
@@ -28,18 +29,3 @@ jobs:
       model_override: ${{ github.event.client_payload.model_override || '' }}
       execution_target: ${{ vars.CODEX_EXECUTION_TARGET || '' }}
       requester: ${{ github.event.client_payload.requester || '' }}
-
-  plan-next-turn:
-    if: >
-      github.event_name == 'issue_comment' &&
-      github.event.action == 'created' &&
-      github.event.sender.login != 'codex[bot]' &&
-      contains(github.event.issue.labels.*.name, 'planning') &&
-      !contains(github.event.comment.body, '<!-- pipe:') &&
-      !contains(github.event.comment.body, '<!-- codex:dispatch:')
-    uses: renanlalier/agentic-pipeline/.github/workflows/agent-plan.yml@v1
-    secrets: inherit
-    with:
-      role: backend-engineer
-      sub_issue: ${{ github.event.issue.number }}
-      execution_target: ${{ vars.CODEX_EXECUTION_TARGET || '' }}
