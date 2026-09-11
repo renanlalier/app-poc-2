@@ -6,6 +6,7 @@ defaults:
   execution_target: local
   models:
     backend-engineer: claude-sonnet-4-6
+    tech-lead: claude-sonnet-4-6
     qa: claude-sonnet-4-6
 
 roles_enabled: [backend-engineer, qa]
