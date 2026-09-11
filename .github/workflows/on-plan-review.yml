@@ -2,13 +2,17 @@ name: on-plan-review
 
 # Phase 2b — Plan review (agent-to-agent).
 #
-# Fires when agent-plan applies the plan-review-requested label, signalling
+# Fires when agent-plan sends repository_dispatch(agent-plan-review), signalling
 # that the engineer has proposed a plan and the Tech Lead should review it.
 # The Tech Lead approves or requests revision without human intervention.
+#
+# NOTE: agent-plan applies plan-review-requested label for visibility, but uses
+# repository_dispatch to trigger this workflow because GITHUB_TOKEN cannot trigger
+# labeled events in other workflows (GitHub anti-loop protection).
 
 on:
-  issues:
-    types: [labeled]
+  repository_dispatch:
+    types: [agent-plan-review]
 
 permissions:
   issues: write
@@ -17,13 +21,10 @@ permissions:
 
 jobs:
   review-plan:
-    if: >
-      github.event_name == 'issues' &&
-      github.event.action == 'labeled' &&
-      github.event.label.name == 'plan-review-requested'
+    if: github.event_name == 'repository_dispatch' && github.event.action == 'agent-plan-review'
     uses: renanlalier/agentic-pipeline/.github/workflows/agent-plan-review.yml@v1
     secrets: inherit
     with:
-      sub_issue: ${{ github.event.issue.number }}
+      sub_issue: ${{ github.event.client_payload.sub_issue }}
       role: backend-engineer
       execution_target: ${{ vars.CODEX_EXECUTION_TARGET || '' }}
